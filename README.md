@@ -4,8 +4,8 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 
 | Package | Latest version | `i` |
 | ------------- | ------------- |------------- |
-| IGet | [![Nuget](https://img.shields.io/nuget/v/iget)](https://www.nuget.org/packages/iget) | `i.Get<Class>()` or `i.Get<IInterface>(reflectedClassType)` |
-| IGet.GetAll | [![Nuget](https://img.shields.io/nuget/v/iget.getall)](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
+| [IGet](https://www.nuget.org/packages/iget) | [![Nuget](https://img.shields.io/nuget/v/iget)](https://www.nuget.org/packages/iget) | `i.Get<Class>()` or `i.Get<IInterface>(reflectedClassType)` |
+| [IGet.GetAll](https://www.nuget.org/packages/IGet.GetAll) | [![Nuget](https://img.shields.io/nuget/v/iget.getall)](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
 
 ### Table of Contents
 **[Quick setup](#quick-setup)**<br>
@@ -30,7 +30,7 @@ using IGetAll;
 serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 ```
-*Idea*: also replace `mediatR.Publish(notification)` by creating a generic notification publisher that can be used like `i.Get<NotificationPublisher<NotificationA>>().Publish(notification)`. See examples below.
+*Idea*: also replace `mediatR.Publish(notification)` by `i.Get<NotificationPublisher<NotificationA>>().Publish(notification)`. See the examples below.
 
 
 ## Why IGet?
@@ -43,7 +43,7 @@ MediatR has positively shaped code bases of developers for many years. You might
 - use editor shortcuts to jump to a handler's method immediately.
 - have a shorter StackTrace in case of an error.
 - have more control to design complex processes.
-- IGet is easier to understand than MediatR and it therefore might save money.
+- IGet is easier to understand than MediatR and it therefore might save time and money.
 - IGet is extremely lightweight - less code often means fewer bugs.
 
 IGet has only one responsibility - instantiating classes with their dependencies injected - but with this you can create MediatR-like structures easily. A basic IRequest-IRequestHandler structure needs less code if you use IGet and complex structures such as INotification-INotificationHandler are completely under your control.
@@ -133,26 +133,26 @@ public class MoreComplexHandler
         i = iget;
     }
 
-    public Result<WhatWasAskedFor> Handle(Request request)
+    public Result<WhatWasAskedFor> Handle(RequestX request)
     {
         try
         {
-            var validationResult = i.Get<Validator>().Validate(request);
-            if (!validationResult.IsValid)
+            var validationResult = i.Get<RequestXValidator>().Validate(request);
+            if (validationResult.IsFail)
             {
-                return Result.Fail<WhatWasAskedFor>(validationResult.Message);
+                return Result.Fail<WhatWasAskedFor>(validationResult.ErrorMessages);
             }
 
-            i.Get<PreProcessor>().Prepare(request);
-            var whatWasAskedFor = i.Get<MainProcessor>().Handle(request);
+            i.Get<RequestXPreProcessor>().Prepare(request);
+            var whatWasAskedFor = i.Get<RequestXMainProcessor>().Handle(request);
 
             try
             {
-                i.Get<PostProcessor>().DoLessImportantStuffWith(request, whatWasAskedFor);
+                i.Get<RequestXPostProcessor>().DoLessImportantStuffWith(request, whatWasAskedFor);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "PostProcessor failed for request {requestId}.", request.Id);
+                _logger.LogWarning(ex, "Post processor failed for request {requestId}.", request.Id);
             }
 
             return Result.Success(whatWasAskedFor);
@@ -203,7 +203,7 @@ public class NotificationPublisher
 ```
 Notes:
 - Exceptions should be logged in the `catch` blocks.
-- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at [IGet.GetAll](#why-igetgetall). You can ask IGet.GetAll to return an instance of each class that implements a certain interface, for example `IMyNotification<MyRequest>`. It uses `i.Get<T>(type)` from [IGet](#why-iget) for instantiating the `type` and casting it to `T` and it has a "memory" to increase performance on next calls.
+- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at [IGet.GetAll](#why-igetgetall). You can ask IGet.GetAll to return an instance of each class that implements a certain interface, for example `INotification<MyRequest>`. It uses `i.Get<T>(type)` from [IGet](#why-iget) for instantiating the `type` and casting it to `T` and it has a "memory" to increase performance on next calls.
 
 #### Example 3
 You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers:
@@ -283,7 +283,7 @@ var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 
 ## Why IGet.GetAll?
 
-[IGet](https://www.nuget.org/packages/iget) gets single classes, but cannot provide multiple in one call. If you like MediatR's INotification-INotificationHandler combination then you will probably feel the need for something that automatically collects INotificationHandlers - that is one of the things that `i.GetAll<T>()` can do - it has the following benefits:
+[IGet](https://www.nuget.org/packages/iget) gets single classes, but cannot provide multiple in one call. If you like MediatR's INotification-INotificationHandler combination then you will probably feel the need for something that automatically collects multiple INotificationHandlers - that is one of the things that `i.GetAll<T>()` can do - it has the following benefits:
 
 - you declare whatever interfaces and base classes you like; this package does not force you to use pre-defined interfaces.
 - after `i.GetAll<T>()` you explicitly show how you handle exceptions, making your code easier to understand.
@@ -291,12 +291,16 @@ var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 
 Also note: no matter how complicated your interfaces or generic base classes are - think about `IMyInterface<SomeClass, NestedBaseClass<AnotherClass, AndMore>>` - no additional configuration is needed.
 
-## About performance
 
-Each time you use `i.GetAll<T>()` for a new type `T` the collected `Type[]` is stored in a `ConcurrentDictionary` so that when you call `i.GetAll<T>()` next time for the same type `T`, no assembly scanning is done.
+## About IGet.GetAll's performance
+
+Each time you use `i.GetAll<T>()` for a new type `T`, the collected `Type[]` is stored in a `ConcurrentDictionary`. The next time you call `i.GetAll<T>()` for the same type `T`, no assembly scanning is done.
 
 
-## Example
+## i.GetAll&lt;T&gt;() examples
+
+#### Example 1
+This example shows how you can create a generic notification publisher.
 
 Declare an interface you like:
 ```csharp
@@ -387,6 +391,39 @@ Publish notifications:
 await i.Get<NotificationPublisher<NotificationA>>().Publish(notificationA);
 // invokes HandlerB1:
 await i.Get<NotificationPublisher<NotificationB>>().Publish(notificationB);
+```
+
+#### Example 2
+Note that because the `NotificationPublisher<TNotification>` of the previous example is in your own repository, you can easily tweak it. Do you want some handlers to have priority? Add a second interface `IPrio` to some handlers and execute those first. Do you want to fire them all first and then call `Task.WhenAll`? You are in control - without reading any docs:
+```csharp
+public async Task Publish(TNotification notification, CancellationToken cancellationToken = default)
+{
+    var handlers = i.GetAll<INotificationHandler<TNotification>>();
+    var prioTasks = handlers.Where(handler => handler is IPrio).Select(handler => GetSafeTask(handler));
+    await Task.WhenAll(prioTasks);
+    foreach (var handler in handlers.Where(handler => handler is not IPrio))
+    {
+        await GetSafeTask(handler);
+    }
+
+    async Task GetSafeTask(INotificationHandler<TNotification> handler)
+    {
+        try
+        {
+            await handler.HandleAsync(notification, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in {handlerType} for {notificationKeyValuePairs}.", handler.GetType().FullName, notification.ToKeyValuePairsString());
+        }
+    }
+}
+```
+
+#### Example 3
+Just to make sure it's clear: `i.GetAll<T>()` can be used for any type of interface or base class. Do you need to get a set of validator classes for a certain request? Get them:
+```csharp
+i.GetAll<AbstractValidator<UpdateUserCommand>>()
 ```
 
 ## Try it out
