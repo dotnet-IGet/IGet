@@ -10,7 +10,7 @@ Idea: create a generic notification publisher and use it like i.Get&lt;Notificat
 serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 
-See the readme for the steps (with code examples) to create the described a generic notification publisher.
+See the readme for the steps (with code examples) to create the described generic notification publisher.
 	  </Description>
 	  <RepositoryUrl>https://github.com/dotnet-IGet/IGet</RepositoryUrl>
 	  <PackageIcon>logo.png</PackageIcon>
@@ -26,7 +26,7 @@ See the readme for the steps (with code examples) to create the described a gene
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="IGet" Version="1.1.3" />
+    <PackageReference Include="IGet" Version="1.1.4" />
   </ItemGroup>
 
 	<ItemGroup>
