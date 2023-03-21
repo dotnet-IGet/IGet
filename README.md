@@ -8,9 +8,9 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 | [IGet.GetAll](https://www.nuget.org/packages/IGet.GetAll) | [![Nuget](https://img.shields.io/nuget/v/iget.getall)](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
 
 ### Table of Contents
-**[Quick setup](#quick-setup)**<br>
-**[Why IGet?](#why-iget)**<br>
-**[Why IGet.GetAll?](#why-igetgetall)**
+- **[Quick setup](#quick-setup)**
+- **[Why IGet?](#why-iget)**
+- **[Why IGet.GetAll?](#why-igetgetall)**
 
 ## Quick setup
 
