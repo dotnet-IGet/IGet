@@ -9,6 +9,13 @@ Instantiate classes that are NOT in your service collection via `i.Get<Class>()`
 
 Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio).
 
+### Table of Contents
+**[Quick setup](#quick-setup)**<br>
+**[Why IGet?](#why-iget)**<br>
+**[Why IGet.GetAll?](#why-igetgetall)**
+
+## Quick setup
+
 ### IGet-only
 ```csharp
 serviceCollection.AddIGet();
