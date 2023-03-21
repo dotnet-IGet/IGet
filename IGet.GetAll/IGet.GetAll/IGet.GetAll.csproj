@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	  <Version>1.0.2</Version>
+	  <Description>
+Extends IGet. Get an IEnumerable of class instances (with their dependencies injected) via i.GetAll&lt;IMyInterface&gt;() or i.GetAll&lt;MyBaseClass&gt;().
+Idea: create a generic notification publisher and use it like i.Get&lt;NotificationPublisher&lt;NotificationA&gt;&gt;().Publish(notification) instead of mediatR.Publish(notification). Try it now:
+
+serviceCollection.AddIGet();
+serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
+
+See the readme for the steps (with code examples) to create the described a generic notification publisher.
+	  </Description>
+	  <RepositoryUrl>https://github.com/dotnet-IGet/IGet</RepositoryUrl>
+	  <PackageIcon>logo.png</PackageIcon>
+	  <PackageTags>dependency injection; simple; alternative for MediatR</PackageTags>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	  <AnalysisLevel>latest</AnalysisLevel>
+	  <Copyright>IGet</Copyright>
+	  <Authors>IGet</Authors>
+	  <PackageReleaseNotes>
+		  v1.0.*: updates of the readme.
+	  </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IGet" Version="1.1.3" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\..\LICENSE.txt">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\logo.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+</Project>

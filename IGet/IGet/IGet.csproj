@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <TargetFramework>netstandard2.0</TargetFramework>
+	  <Version>1.1.4</Version>
+	  <Description>Instantiate classes that are NOT in your service collection via i.Get&lt;Class&gt;(). Idea: use i.Get&lt;Handler&gt;().Handle(request) instead of mediatR.Send(request). Try it now: serviceCollection.AddIGet(). See the readme for many examples.</Description>
+	  <PackageIcon>logo.png</PackageIcon>
+	  <RepositoryUrl>https://github.com/dotnet-IGet/IGet</RepositoryUrl>
+	  <PackageTags>dependency injection; simple; alternative for MediatR</PackageTags>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	  <AnalysisLevel>latest</AnalysisLevel>
+	  <Copyright>IGet</Copyright>
+	  <Authors>IGet</Authors>
+	  <PackageReleaseNotes>
+		  v1.0.*: updates of the readme.
+		  v1.1.0: add T Get&lt;T&gt;(Type type).
+		  v1.1.*: updates of the readme.
+	  </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\..\LICENSE.txt">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\logo.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+</Project>
