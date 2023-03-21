@@ -1,13 +1,11 @@
 # IGet
 
-Instantiate classes that are NOT in your service collection via `i.Get<Class>()`. Dependencies from your service collection are automatically injected. Get an IEnumerable of class instances (with their dependencies injected) via `i.GetAll<IMyInterface>()` or `i.GetAll<MyBaseClass>()`.
+Instantiate classes that are NOT in your service collection via `i.Get<MyClass>()`. Dependencies from your service collection are automatically injected. Get an IEnumerable of class instances (with their dependencies injected) via `i.GetAll<IMyInterface>()` or `i.GetAll<MyBaseClass>()`.
 
 | Package | Latest version | `i` |
 | ------------- | ------------- |------------- |
-| IGet | [![Nuget](https://img.shields.io/nuget/v/iget)](https://www.nuget.org/packages/iget) | `i.Get<ClassType>()` or `i.Get<IInterface>(reflectedClassType)` |
+| IGet | [![Nuget](https://img.shields.io/nuget/v/iget)](https://www.nuget.org/packages/iget) | `i.Get<Class>()` or `i.Get<IInterface>(reflectedClassType)` |
 | IGet.GetAll | [![Nuget](https://img.shields.io/nuget/v/iget.getall)](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
-
-Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio).
 
 ### Table of Contents
 **[Quick setup](#quick-setup)**<br>
@@ -16,13 +14,15 @@ Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/
 
 ## Quick setup
 
-### IGet-only
+Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio).
+
+#### IGet-only
 ```csharp
 serviceCollection.AddIGet();
 ```
  *Idea*: use `i.Get<Handler>().Handle(request)` instead of `mediatR.Send(request)`. See the examples below.
 
-### IGet with IGet.GetAll
+#### IGet with IGet.GetAll
 ```csharp
 using IGetAll;
 ```
@@ -203,7 +203,7 @@ public class NotificationPublisher
 ```
 Notes:
 - Exceptions should be logged in the `catch` blocks.
-- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at [IGet.GetAll](https://www.nuget.org/packages/IGet.GetAll). You can ask IGet.GetAll to return an instance of each class that implements a certain interface, for example `IMyNotification<MyRequest>`. It uses `i.Get<T>(type)` from this library for instantiating the `type` and casting it to `T` and it has a "memory" to increase performance on next calls.
+- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at [IGet.GetAll](#why-igetgetall). You can ask IGet.GetAll to return an instance of each class that implements a certain interface, for example `IMyNotification<MyRequest>`. It uses `i.Get<T>(type)` from [IGet](#why-iget) for instantiating the `type` and casting it to `T` and it has a "memory" to increase performance on next calls.
 
 #### Example 3
 You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers:
