@@ -16,43 +16,81 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 
 Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio).
 
-#### IGet-only
+Add `IGet` to the service collection:
 ```csharp
 serviceCollection.AddIGet();
 ```
- *Idea*: use `i.Get<Handler>().Handle(request)` instead of `mediatR.Send(request)`. See the examples below.
-
-#### IGet with IGet.GetAll
+In a .NET Core app, this can be done in Program.cs:
+```csharp
+builder.Services.AddIGet();
+```
+If you also want to use IGet.GetAll, then add the following using statement (or add it as a global using):
 ```csharp
 using IGetAll;
 ```
+and add to the service collection:
 ```csharp
 serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 ```
-*Idea*: also replace `mediatR.Publish(notification)` by `i.Get<NotificationPublisher<NotificationA>>().Publish(notification)`. See the examples below.
+
+Now you can use it (below a .NET Core web app example):
+```csharp
+public class IndexModel : PageModel
+{
+    private readonly IGet i;
+
+    public IndexModel(IGet iget)
+    {
+        i = iget;
+    }
+    
+    
+    public async Task<IActionResult> OnGet([FromRoute] DataRequest request)
+    {
+        var data = await i.Get<DataRequestHandler>().HandleAsync(request);
+        ...
+        return Page();
+    }
+...
+}
+```
+For more examples, see below.
 
 
 ## Why IGet?
 
-MediatR has positively shaped code bases of developers for many years. You might, however, like IGet better:
-
 - you don't need to implement any interface for your handlers.
-- creating a request class is optional.
 - have compile-time checks that all handlers exist.
 - use editor shortcuts to jump to a handler's method immediately.
-- have a shorter StackTrace in case of an error.
-- have more control to design complex processes.
-- IGet is easier to understand than MediatR and it therefore might save time and money.
+- have a short StackTrace in case of an error.
+- IGet is easy to understand - this might save time and money.
 - IGet is extremely lightweight - less code often means fewer bugs.
-
-IGet has only one responsibility - instantiating classes with their dependencies injected - but with this you can create MediatR-like structures easily. A basic IRequest-IRequestHandler structure needs less code if you use IGet and complex structures such as INotification-INotificationHandler are completely under your control.
 
 
 ## Declaring a handler
 
 #### Example 1
-There is no need to implement `IRequest` and `IRequestHandler<Request>` or `IRequest<Result>` and `IRequestHandler<Request, Result>`. Choose another method name and use value type parameters if you want.
+A method signature that fits many contexts is `Task<TResult> HandleAsync(TRequest request, CancellationToken cancellationToken)`:
+```csharp
+public class MyHandler
+{
+    private IConnectionFactory _connectionFactory;
+
+    public MyHandler(IConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
+    public async Task<MyResult> HandleAsync(MyRequest request, CancellationToken cancellationToken)
+    {
+        ...
+    }
+}
+```
+
+#### Example 2
+A method with a value type parameter:
 ```csharp
 public class MyHandler
 {
@@ -69,8 +107,8 @@ public class MyHandler
     }
 }
 ```
-#### Example 2
-Do you prefer synchronous code if possible? That's allowed!
+#### Example 3
+Synchronous code:
 ```csharp
 public class MyHandler
 {
@@ -88,8 +126,8 @@ public class MyHandler
 }
 ```
 
-## Sending a request
-In the examples below `i` is the `IGet` instance where you call `Get` on. (Like `mediator` might have been the name of the variable for a `IMediator` instance where you called `Send` on.)
+
+## Using a handler
 
 #### Example 1
 ```csharp
@@ -117,95 +155,48 @@ Because you get the handler via generics, your code is type-checked by the compi
 ## More complex scenarios
 
 #### Example 1
-Handlers may get other handlers to do stuff for them, like validation, pre-processing and post-processing.
-```csharp
-var result = await i.Get<MoreComplexHandler>().Handle(request);
-```
-```csharp
-public class MoreComplexHandler
-{
-    private ILogger<MoreComplexHandler> _logger;
-    private IGet i;
+Handlers may get other handlers to do stuff for them.
 
-    public MoreComplexHandler(IGet iget, ILogger<MoreComplexHandler> logger)
+Declare:
+```csharp
+public class SubscribeRequestHandler
+{
+    private readonly IConnectionFactory _connectionFactory;
+    private readonly IGet i;
+
+    public SubscribeRequestHandler(IConnectionFactory connectionFactory, IGet iget)
     {
-        _logger = logger;
+        _connectionFactory = connectionFactory;
         i = iget;
     }
 
-    public Result<WhatWasAskedFor> Handle(RequestX request)
+    public async Task<Result> HandleAsync(SubscribeRequest request)
     {
-        try
+        var validationResult = await i.Get<SubscribeRequestValidator>().ValidateAsync(request);
+        if (validationResult.IsFail)
         {
-            var validationResult = i.Get<RequestXValidator>().Validate(request);
-            if (validationResult.IsFail)
-            {
-                return Result.Fail<WhatWasAskedFor>(validationResult.ErrorMessages);
-            }
-
-            i.Get<RequestXPreProcessor>().Prepare(request);
-            var whatWasAskedFor = i.Get<RequestXMainProcessor>().Handle(request);
-
-            try
-            {
-                i.Get<RequestXPostProcessor>().DoLessImportantStuffWith(request, whatWasAskedFor);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Post processor failed for request {requestId}.", request.Id);
-            }
-
-            return Result.Success(whatWasAskedFor);
+            return validationResult;
         }
-        catch (Exception ex)
+        using var connection = await _connectionFactory.GetConnectionAsync();
+        await connection.InsertAsync(new WorkshopParticipant
         {
-            _logger.LogError(ex, "Unexpected error for request {requestId}.", request.Id);
-            return Result.Fail<WhatWasAskedFor>("Something went wrong. Try again later.");
-        }
+            Name = request.Name.Trim(),
+            WorkshopId = request.WorkshopId,
+        });
+
+        return Result.Success();
     }
 }
+```
+Use:
+```csharp
+    public async Task<IActionResult> OnPost(SubscribeRequest request)
+    {
+        var result = await i.Get<SubscribeRequestHandler>().HandleAsync(request);
+        ...
 ```
 
 #### Example 2
-The functionality of MediatR's INotification-INotificationHandler combination can be created via something like this:
-```csharp
-await i.Get<NotificationPublisher>().PublishAsync(notification);
-```
-```csharp
-public class NotificationPublisher
-{
-    private IGet i;
-
-    public NotificationPublisher(IGet iget)
-    {
-        i = iget;
-    }
-
-    public async Task PublishAsync(Notification notification)
-    {
-        try
-        {
-            await i.Get<FirstHandler>().HandleAsync(notification);
-        }
-        catch { }
-        try
-        {
-            await i.Get<SecondHandler>().HandleAsync(notification);
-        }
-        catch { }
-        try
-        {
-            i.Get<ThirdHandler>().Handle(notification);
-        }
-        catch { }
-    }
-}
-```
-Notes:
-- Exceptions should be logged in the `catch` blocks.
-- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at [IGet.GetAll](#why-igetgetall). You can ask IGet.GetAll to return an instance of each class that implements a certain interface, for example `INotification<MyRequest>`. It uses `i.Get<T>(type)` from [IGet](#why-iget) for instantiating the `type` and casting it to `T` and it has a "memory" to increase performance on next calls.
-
-#### Example 3
 You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers:
 ```csharp
 public abstract class BaseHandler<THandler,TRequest, TResponse>
@@ -281,16 +272,49 @@ Use:
 var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 ```
 
+
+#### Example 3
+A try-catch structure for multiple independent handlers without a return value:
+```csharp
+await i.Get<NotificationPublisher>().PublishAsync(notification);
+```
+```csharp
+public class NotificationPublisher
+{
+    private IGet i;
+
+    public NotificationPublisher(IGet iget)
+    {
+        i = iget;
+    }
+
+    public async Task PublishAsync(Notification notification)
+    {
+        try
+        {
+            await i.Get<FirstHandler>().HandleAsync(notification);
+        }
+        catch { }
+        try
+        {
+            await i.Get<SecondHandler>().HandleAsync(notification);
+        }
+        catch { }
+        try
+        {
+            i.Get<ThirdHandler>().Handle(notification);
+        }
+        catch { }
+    }
+}
+```
+Notes:
+- Exceptions should be logged in the `catch` blocks.
+- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at the IGet.GetAll examples below.
+
 ## Why IGet.GetAll?
 
-[IGet](https://www.nuget.org/packages/iget) gets single classes, but cannot provide multiple in one call. If you like MediatR's INotification-INotificationHandler combination then you will probably feel the need for something that automatically collects multiple INotificationHandlers - that is one of the things that `i.GetAll<T>()` can do - it has the following benefits:
-
-- you declare whatever interfaces and base classes you like; this package does not force you to use pre-defined interfaces.
-- after `i.GetAll<T>()` you explicitly show how you handle exceptions, making your code easier to understand.
-- after `i.GetAll<T>()` you explicitly show that you use `Task.WhenAll` or `foreach` with `await` (or synchronous code).
-
-Also note: no matter how complicated your interfaces or generic base classes are - think about `IMyInterface<SomeClass, NestedBaseClass<AnotherClass, AndMore>>` - no additional configuration is needed.
-
+With `i.GetAll<T>()` you can get multiple handlers that implement the same interface or base class. No matter how complicated your interfaces or generic base classes are - think about `IMyInterface<SomeClass, NestedBaseClass<AnotherClass, AndMore>>` - no additional configuration is needed.
 
 ## About IGet.GetAll's performance
 
@@ -300,7 +324,7 @@ Each time you use `i.GetAll<T>()` for a new type `T`, the collected `Type[]` is 
 ## i.GetAll&lt;T&gt;() examples
 
 #### Example 1
-This example shows how you can create a generic notification publisher.
+This example shows how you can create a generic "notification publisher":
 
 Declare an interface you like:
 ```csharp
