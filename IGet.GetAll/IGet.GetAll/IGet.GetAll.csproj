@@ -1,16 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-	  <Version>1.0.2</Version>
+	  <Version>1.0.3</Version>
 	  <Description>
-Extends IGet. Get an IEnumerable of class instances (with their dependencies injected) via i.GetAll&lt;IMyInterface&gt;() or i.GetAll&lt;MyBaseClass&gt;().
-Idea: create a generic notification publisher and use it like i.Get&lt;NotificationPublisher&lt;NotificationA&gt;&gt;().Publish(notification) instead of mediatR.Publish(notification). Try it now:
+Extends IGet. Get an IEnumerable of class instances (with their dependencies injected) via i.GetAll&lt;IMyInterface&gt;() or i.GetAll&lt;MyBaseClass&gt;(). Try it now:
 
 serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 
-See the readme for the steps (with code examples) to create the described generic notification publisher.
+See the readme for examples.
 	  </Description>
 	  <RepositoryUrl>https://github.com/dotnet-IGet/IGet</RepositoryUrl>
 	  <PackageIcon>logo.png</PackageIcon>
@@ -26,7 +25,7 @@ See the readme for the steps (with code examples) to create the described generi
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="IGet" Version="1.1.4" />
+    <PackageReference Include="IGet" Version="1.1.5" />
   </ItemGroup>
 
 	<ItemGroup>
