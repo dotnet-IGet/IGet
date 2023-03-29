@@ -26,16 +26,6 @@ In a .NET Core app, this can be done in Program.cs:
 ```csharp
 builder.Services.AddIGet();
 ```
-If you also want to use IGet.GetAll, then add the following using statement (or add it as a global using):
-```csharp
-using IGetAll;
-```
-and add to the service collection:
-```csharp
-serviceCollection.AddIGet();
-serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
-```
-
 Now you can use it (below a .NET Core web app example):
 ```csharp
 public class IndexModel : PageModel
@@ -56,6 +46,15 @@ public class IndexModel : PageModel
     }
 ...
 }
+```
+If you also want to use IGet.GetAll, then add the following using statement (or add it as a global using):
+```csharp
+using IGetAll;
+```
+and add to the service collection:
+```csharp
+serviceCollection.AddIGet();
+serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 ```
 For more examples, see below.
 
@@ -326,7 +325,7 @@ Each time you use `i.GetAll<T>()` for a new type `T`, the collected `Type[]` is 
 ## i.GetAll&lt;T&gt;() examples
 
 #### Example 1
-This example shows how you can create a generic event publisher that collects the handlers for you:
+This example shows how you can create a generic event publisher that collects the handlers for you.
 
 Declare an interface you like:
 ```csharp
