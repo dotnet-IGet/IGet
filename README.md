@@ -14,7 +14,9 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 
 ## Quick setup
 
-Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio).
+Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio):
+
+<img src="https://user-images.githubusercontent.com/128420391/228517777-5e125fab-08ea-4466-92cc-06f4b016b884.png" width="300" />
 
 Add `IGet` to the service collection:
 ```csharp
@@ -103,7 +105,7 @@ public class MyHandler
 
     public async Task<MyResult> ChooseASignature(int id)
     {
-        // do something
+        ...
     }
 }
 ```
@@ -258,7 +260,7 @@ public class ProductOverviewQueryHandler
     {
         await using var connection = await _connectionFactory.GetOpenConnectionAsync(cancellationToken);
 
-        // execute
+        ...
 
         return new Result
         {
@@ -274,35 +276,35 @@ var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 
 
 #### Example 3
-A try-catch structure for multiple independent handlers without a return value:
+Use a try-catch structure for multiple noninterdependent handlers of the same event:
 ```csharp
-await i.Get<NotificationPublisher>().PublishAsync(notification);
+await i.Get<MyEventPublisher>().PublishAsync(myEvent);
 ```
 ```csharp
-public class NotificationPublisher
+public class MyEventPublisher
 {
     private IGet i;
 
-    public NotificationPublisher(IGet iget)
+    public MyEventPublisher(IGet iget)
     {
         i = iget;
     }
 
-    public async Task PublishAsync(Notification notification)
+    public async Task PublishAsync(MyEvent myEvent)
     {
         try
         {
-            await i.Get<FirstHandler>().HandleAsync(notification);
+            await i.Get<FirstHandler>().HandleAsync(myEvent);
         }
         catch { }
         try
         {
-            await i.Get<SecondHandler>().HandleAsync(notification);
+            await i.Get<SecondHandler>().HandleAsync(myEvent);
         }
         catch { }
         try
         {
-            i.Get<ThirdHandler>().Handle(notification);
+            i.Get<ThirdHandler>().Handle(myEvent);
         }
         catch { }
     }
@@ -310,7 +312,7 @@ public class NotificationPublisher
 ```
 Notes:
 - Exceptions should be logged in the `catch` blocks.
-- If you find the example above too risky - because you might forget to register a newly created handler in the publisher, then have a look at the IGet.GetAll examples below.
+- If you find the example above too risky - because you might forget to register a newly created handler in the event publisher, then have a look at the IGet.GetAll examples below.
 
 ## Why IGet.GetAll?
 
@@ -324,105 +326,105 @@ Each time you use `i.GetAll<T>()` for a new type `T`, the collected `Type[]` is 
 ## i.GetAll&lt;T&gt;() examples
 
 #### Example 1
-This example shows how you can create a generic "notification publisher":
+This example shows how you can create a generic event publisher that collects the handlers for you:
 
 Declare an interface you like:
 ```csharp
-public interface INotificationHandler<TNotification>
+public interface IEventHandler<TEvent>
 {
-    Task HandleAsync(TNotification notification, CancellationToken cancellationToken);
+    Task HandleAsync(TEvent e, CancellationToken cancellationToken);
 }
 ```
 
 Implement the interface:
 ```csharp
-public class NotificationA { }
+public class EventA { }
 
-public class HandlerA1 : INotificationHandler<NotificationA>
+public class HandlerA1 : IEventHandler<EventA>
 {
     private readonly ILogger<HandlerA1> _logger;
     public HandlerA1(ILogger<HandlerA1> logger)
     {
         _logger = logger;
     }
-    public async Task HandleAsync(NotificationA notification, CancellationToken cancellationToken)
+    public async Task HandleAsync(EventA e, CancellationToken cancellationToken)
     {
-        // do stuff
+        ...
     }
 }
 
-public class HandlerA2 : INotificationHandler<NotificationA>
+public class HandlerA2 : IEventHandler<EventA>
 {
     private readonly IConnectionFactory _connectionFactory;
     public HandlerA2(IConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }
-    public async Task HandleAsync(NotificationA notification, CancellationToken cancellationToken)
+    public async Task HandleAsync(EventA e, CancellationToken cancellationToken)
     {
-        // do stuff
+        ...
     }
 }
 
-public class NotificationB { }
+public class EventB { }
 
-public class HandlerB1 : INotificationHandler<NotificationB>
+public class HandlerB1 : IEventHandler<EventB>
 {
     private readonly ILogger<Handler1> _logger;
     public HandlerB1(ILogger<Handler1> logger)
     {
         _logger = logger;
     }
-    public async Task HandleAsync(NotificationB notification, CancellationToken cancellationToken)
+    public async Task HandleAsync(EventB e, CancellationToken cancellationToken)
     {
-        // do stuff
+        ...
     }
 }
 ```
 
-Create a generic notification publisher for all your notification types:
+Create a generic event publisher for all your event types:
 ```csharp
-public class NotificationPublisher<TNotification> where TNotification : notnull
+public class EventPublisher<TEvent> where TEvent : notnull
 {
     private readonly ILogger _logger;
     private readonly IGet i;
 
-    public NotificationPublisher(IGet iget, ILogger logger)
+    public EventPublisher(IGet iget, ILogger logger)
     {
         _logger = logger;
         i = iget;
     }
 
-    public async Task Publish(TNotification notification, CancellationToken cancellationToken = default)
+    public async Task Publish(TEvent e, CancellationToken cancellationToken = default)
     {
-        foreach (var handler in i.GetAll<INotificationHandler<TNotification>>())
+        foreach (var handler in i.GetAll<IEventHandler<TEvent>>())
         {
             try
             {
-                await handler.HandleAsync(notification, cancellationToken);
+                await handler.HandleAsync(e, cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in {handlerType} for {notificationKeyValuePairs}.", handler.GetType().FullName, notification.ToKeyValuePairsString());
+                _logger.LogError(ex, "Error in {handlerType} for {eventKeyValuePairs}.", handler.GetType().FullName, e.ToKeyValuePairsString());
             }
         }
     }
 }
 ```
-Publish notifications:
+Publish events:
 ```csharp
 // invokes HandlerA1 and HandlerA2:
-await i.Get<NotificationPublisher<NotificationA>>().Publish(notificationA);
+await i.Get<EventPublisher<EventA>>().Publish(eventA);
 // invokes HandlerB1:
-await i.Get<NotificationPublisher<NotificationB>>().Publish(notificationB);
+await i.Get<EventPublisher<EventB>>().Publish(eventB);
 ```
 
 #### Example 2
-Note that because the `NotificationPublisher<TNotification>` of the previous example is in your own repository, you can easily tweak it. Do you want some handlers to have priority? Add a second interface `IPrio` to some handlers and execute those first. Do you want to fire them all first and then call `Task.WhenAll`? You are in control - without reading any docs:
+Note that because the `EventPublisher<TEvent>` of the previous example is in your own repository, you can easily tweak it. Do you want some handlers to have priority? Add a second interface `IPrio` to some handlers and execute those first. Do you want to fire them all first and then call `Task.WhenAll`? You are in control - without reading any docs:
 ```csharp
-public async Task Publish(TNotification notification, CancellationToken cancellationToken = default)
+public async Task Publish(TEvent e, CancellationToken cancellationToken = default)
 {
-    var handlers = i.GetAll<INotificationHandler<TNotification>>();
+    var handlers = i.GetAll<IEventHandler<TEvent>>();
     var prioTasks = handlers.Where(handler => handler is IPrio).Select(handler => GetSafeTask(handler));
     await Task.WhenAll(prioTasks);
     foreach (var handler in handlers.Where(handler => handler is not IPrio))
@@ -430,15 +432,15 @@ public async Task Publish(TNotification notification, CancellationToken cancella
         await GetSafeTask(handler);
     }
 
-    async Task GetSafeTask(INotificationHandler<TNotification> handler)
+    async Task GetSafeTask(IEventHandler<TEvent> handler)
     {
         try
         {
-            await handler.HandleAsync(notification, cancellationToken);
+            await handler.HandleAsync(e, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in {handlerType} for {notificationKeyValuePairs}.", handler.GetType().FullName, notification.ToKeyValuePairsString());
+            _logger.LogError(ex, "Error in {handlerType} for {eventKeyValuePairs}.", handler.GetType().FullName, e.ToKeyValuePairsString());
         }
     }
 }
