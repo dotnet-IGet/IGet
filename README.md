@@ -14,19 +14,15 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 
 ## Quick setup
 
-Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio):
+1. Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio):
 
 <img src="https://user-images.githubusercontent.com/128420391/228517777-5e125fab-08ea-4466-92cc-06f4b016b884.png" width="300" />
 
-Add `IGet` to the service collection:
-```csharp
-serviceCollection.AddIGet();
-```
-In a .NET Core app, this can be done in Program.cs:
+2. Add `IGet` to your service collection via `serviceCollection.AddIGet()` - in a .NET Core app, this can be done in Program.cs:
 ```csharp
 builder.Services.AddIGet();
 ```
-Now you can use it (below a .NET Core web app example):
+3. Now you can use it (for example in a .NET Core web app):
 ```csharp
 public class IndexModel : PageModel
 {
@@ -38,20 +34,19 @@ public class IndexModel : PageModel
     }
     
     
-    public async Task<IActionResult> OnGet([FromRoute] DataRequest request)
+    public void OnGet()
     {
-        var data = await i.Get<DataRequestHandler>().HandleAsync(request);
+        var data = i.Get<DataRequestHandler>().Handle();
         ...
-        return Page();
     }
 ...
 }
 ```
-If you also want to use IGet.GetAll, then add the following using statement (or add it as a global using):
+4. If you've also installed IGet.GetAll, then add the following using statement (or add it as a global using):
 ```csharp
 using IGetAll;
 ```
-and add to the service collection:
+5. and add to the service collection:
 ```csharp
 serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
