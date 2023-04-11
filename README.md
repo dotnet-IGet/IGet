@@ -193,7 +193,47 @@ Use:
 ```
 
 #### Example 2
-You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers (but also see the next example if you'd rather use decorators):
+Use a try-catch structure for multiple noninterdependent handlers of the same event:
+```csharp
+await i.Get<MyEventPublisher>().PublishAsync(myEvent);
+```
+```csharp
+public class MyEventPublisher
+{
+    private IGet i;
+
+    public MyEventPublisher(IGet iget)
+    {
+        i = iget;
+    }
+
+    public async Task PublishAsync(MyEvent myEvent)
+    {
+        try
+        {
+            await i.Get<FirstHandler>().HandleAsync(myEvent);
+        }
+        catch { }
+        try
+        {
+            await i.Get<SecondHandler>().HandleAsync(myEvent);
+        }
+        catch { }
+        try
+        {
+            i.Get<ThirdHandler>().Handle(myEvent);
+        }
+        catch { }
+    }
+}
+```
+Notes:
+- Exceptions should be logged in the `catch` blocks.
+- If you dislike creating event publishers like this, then have a look at the IGet.GetAll examples further down this readme.
+
+
+#### Example 3
+You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers:
 ```csharp
 public abstract class BaseHandler<THandler,TRequest, TResponse>
     where THandler : notnull
@@ -269,7 +309,7 @@ Use:
 var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 ```
 
-#### Example 3
+#### Example 4
 Instead of using a base class, you could use decorators to add behaviour to handlers:
 ```csharp
 var decoratedHandler = i.Get<MyHandler>().DecorateWithPerformanceProfiler();
@@ -310,7 +350,7 @@ public static class DecoratableHandlerExtensions
 }
 ```
 
-#### Example 4
+#### Example 5
 If a decorator depends on services, you could create an extension method with the addition argument `IGet i`. Using the extension method then looks like this:
 ```csharp
 var decoratedHandler = i.Get<MyHandler>().WithPerformanceLogging(i);
@@ -352,45 +392,6 @@ public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IDecorata
     }
 }
 ```
-
-#### Example 5
-Use a try-catch structure for multiple noninterdependent handlers of the same event:
-```csharp
-await i.Get<MyEventPublisher>().PublishAsync(myEvent);
-```
-```csharp
-public class MyEventPublisher
-{
-    private IGet i;
-
-    public MyEventPublisher(IGet iget)
-    {
-        i = iget;
-    }
-
-    public async Task PublishAsync(MyEvent myEvent)
-    {
-        try
-        {
-            await i.Get<FirstHandler>().HandleAsync(myEvent);
-        }
-        catch { }
-        try
-        {
-            await i.Get<SecondHandler>().HandleAsync(myEvent);
-        }
-        catch { }
-        try
-        {
-            i.Get<ThirdHandler>().Handle(myEvent);
-        }
-        catch { }
-    }
-}
-```
-Notes:
-- Exceptions should be logged in the `catch` blocks.
-- If you find the example above too risky - because you might forget to register a newly created handler in the event publisher, then have a look at the IGet.GetAll examples below.
 
 ## Why IGet.GetAll?
 
