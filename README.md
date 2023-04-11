@@ -301,9 +301,9 @@ public static class DecoratableHandlerExtensions
 
         public async Task<TResponse> HandleAsync(TRequest request)
         {
-            using (PerformanceProfiler.Current.Step($"[Handler] {request?.GetType().Name}"))
+            using (PerformanceProfiler.Current.Step($"[Handler] {request.GetType().Name}"))
             {
-                return await _decorated.HandleAsync(request!);
+                return await _decorated.HandleAsync(request);
             }
         }
     }
@@ -347,7 +347,7 @@ public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IDecorata
     {
         using (_dependency.DoSomething())
         {
-            return await Decorated.HandleAsync(request!);
+            return await Decorated.HandleAsync(request);
         }
     }
 }
