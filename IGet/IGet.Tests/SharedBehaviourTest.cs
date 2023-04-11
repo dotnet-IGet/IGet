@@ -42,34 +42,35 @@ public abstract class BaseHandler<THandler,TRequest, TResponse>
         _connectionFactory = baseHandlerServices.ConnectionFactory;
         _hostEnvironment = baseHandlerServices.HostEnvironment;
     }
-    public async Task<TResponse> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
-    {
-        HandleBefore(request);
-        var result = await HandleCoreAsync(request, cancellationToken);
-        HandleAfter();
-        return result;
-    }
 
-    private void HandleBefore(TRequest request)
+    public async Task<TResponse> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
     {
         if (!_hostEnvironment.IsProduction())
         {
             _logger.LogInformation("Start handling request {RequestMembers}.", request.ToKeyValuePairsString());
         }
-        StartTime = DateTime.UtcNow;
+        var startTime = DateTime.UtcNow;
+
+        TResponse result;
+        try
+        {
+            result = await HandleCoreAsync(request, cancellationToken);
+        }
+        finally
+        {
+            var totalMilliseconds = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            if (!_hostEnvironment.IsProduction() || totalMilliseconds > 500)
+            {
+                _logger.LogInformation("Finished in {TotalMilliseconds}ms.", totalMilliseconds);
+            }
+        }
+
+        return result;
     }
-    DateTime StartTime;
+
     protected abstract Task<TResponse> HandleCoreAsync(
         TRequest request, 
         CancellationToken cancellationToken);
-    private void HandleAfter()
-    {
-        var totalMilliseconds = (DateTime.UtcNow - StartTime).TotalMilliseconds;
-        if (!_hostEnvironment.IsProduction() || totalMilliseconds > 500)
-        {
-            _logger.LogInformation("Finished in {TotalMilliseconds}ms.", totalMilliseconds);
-        }
-    }
 }
 
 public class ProductOverviewQueryHandler 
