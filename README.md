@@ -193,7 +193,7 @@ Use:
 ```
 
 #### Example 2
-You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers:
+You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers (but also see the next example if you'd rather use decorators):
 ```csharp
 public abstract class BaseHandler<THandler,TRequest, TResponse>
     where THandler : notnull
@@ -209,34 +209,35 @@ public abstract class BaseHandler<THandler,TRequest, TResponse>
         _connectionFactory = baseHandlerServices.ConnectionFactory;
         _hostEnvironment = baseHandlerServices.HostEnvironment;
     }
-    public async Task<TResponse> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
-    {
-        HandleBefore(request);
-        var result = await HandleCoreAsync(request, cancellationToken);
-        HandleAfter();
-        return result;
-    }
 
-    private void HandleBefore(TRequest request)
+    public async Task<TResponse> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
     {
         if (!_hostEnvironment.IsProduction())
         {
             _logger.LogInformation("Start handling request {RequestMembers}.", request.ToKeyValuePairsString());
         }
-        StartTime = DateTime.UtcNow;
+        var startTime = DateTime.UtcNow;
+
+        TResponse result;
+        try
+        {
+            result = await HandleCoreAsync(request, cancellationToken);
+        }
+        finally
+        {
+            var totalMilliseconds = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            if (!_hostEnvironment.IsProduction() || totalMilliseconds > 500)
+            {
+                _logger.LogInformation("Finished in {TotalMilliseconds}ms.", totalMilliseconds);
+            }
+        }
+
+        return result;
     }
-    DateTime StartTime;
+
     protected abstract Task<TResponse> HandleCoreAsync(
         TRequest request, 
         CancellationToken cancellationToken);
-    private void HandleAfter()
-    {
-        var totalMilliseconds = (DateTime.UtcNow - StartTime).TotalMilliseconds;
-        if (!_hostEnvironment.IsProduction() || totalMilliseconds > 500)
-        {
-            _logger.LogInformation("Finished in {TotalMilliseconds}ms.", totalMilliseconds);
-        }
-    }
 }
 ```
 Inherit:
@@ -268,8 +269,91 @@ Use:
 var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 ```
 
-
 #### Example 3
+Instead of using a base class, you could use decorators to add behaviour to handlers:
+```csharp
+var decoratedHandler = i.Get<MyHandler>().DecorateWithPerformanceProfiler();
+var result = await decoratedHandler.HandleAsync(request);
+```
+For this to work, you need something like:
+```csharp
+public interface IDecoratableHandler<TRequest, TResponse>
+{
+    public Task<TResponse> HandleAsync(TRequest request);
+}
+
+public static class DecoratableHandlerExtensions
+{
+    public static IDecoratableHandler<TRequest, TResponse> DecorateWithPerformanceProfiler<TRequest, TResponse>(
+        this IDecoratableHandler<TRequest, TResponse> decorated)
+    {
+        return new PerformanceProfilerDecoratedHandler<TRequest, TResponse>(decorated);
+    }
+
+    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IDecoratableHandler<TRequest, TResponse>
+    {
+        private readonly IDecoratableHandler<TRequest, TResponse> _decorated;
+
+        public PerformanceProfilerDecoratedHandler(IDecoratableHandler<TRequest, TResponse> decorated)
+        {
+            _decorated = decorated;
+        }
+
+        public async Task<TResponse> HandleAsync(TRequest request)
+        {
+            using (PerformanceProfiler.Current.Step($"[Handler] {request?.GetType().Name}"))
+            {
+                return await _decorated.HandleAsync(request!);
+            }
+        }
+    }
+}
+```
+
+#### Example 4
+If a decorator depends on services, you could create an extension method with the addition argument `IGet i`. Using the extension method then looks like this:
+```csharp
+var decoratedHandler = i.Get<MyHandler>().WithPerformanceLogging(i);
+var result = await decoratedHandler.HandleAsync(request);
+```
+To make this work, create something like this:
+```csharp
+public static IDecoratableHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
+    this IDecoratableHandler<TRequest, TResponse> decorated, IGet i)
+    {
+        var decorator = i.Get<PerformanceLoggingDecoratedHandler<TRequest, TResponse>>();
+        decorator.Decorate(decorated);
+        return decorator;
+    }
+
+public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IDecoratableHandler<TRequest, TResponse>
+{
+    private readonly IDependency _dependency;
+
+    public PerformanceLoggingDecoratedHandler(IDependency dependency)
+    {
+        _dependency = dependency;
+    }
+
+    public IDecoratableHandler<TRequest, TResponse> Decorated { get; set; } = default!;
+
+    public IDecoratableHandler<TRequest, TResponse> Decorate(IDecoratableHandler<TRequest, TResponse> decorated)
+    {
+        Decorated = decorated;
+        return this;
+    }
+
+    public async Task<TResponse> HandleAsync(TRequest request)
+    {
+        using (_dependency.DoSomething())
+        {
+            return await Decorated.HandleAsync(request!);
+        }
+    }
+}
+```
+
+#### Example 5
 Use a try-catch structure for multiple noninterdependent handlers of the same event:
 ```csharp
 await i.Get<MyEventPublisher>().PublishAsync(myEvent);
