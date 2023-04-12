@@ -7,6 +7,8 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 | [IGet](https://www.nuget.org/packages/iget) | `i.Get<Class>()` or `i.Get<IInterface>(reflectedClassType)` |
 | [IGet.GetAll](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
 
+Release notes can be found on NuGet.
+
 ### Table of Contents
 - **[Setup of IGet](#setup-of-iget)**
 - **[Setup with GetAll](#setup-with-getall)**
@@ -44,12 +46,7 @@ serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 public class IndexModel : PageModel
 {
     private readonly IGet i;
-
-    public IndexModel(IGet iget)
-    {
-        i = iget;
-    }
-    
+    public IndexModel(IGet iget) => i = iget;    
     
     public void OnGet()
     {
@@ -232,7 +229,7 @@ Notes:
 You may want multiple handlers to have certian behaviour, for example logging their execution time. You can do this via inheritance or via decorators.
 
 #### Example 1
-You could create a base class for (a subset of) your handlers if you want to reduce the number of constructor dependencies in your concrete handlers and/or do performance logging (this example violates the single-responsibility principle):
+You could create a base class for (a subset of) your handlers if you want to do performance logging:
 ```csharp
 public abstract class BaseHandler<TRequest, TResponse>
     where TRequest : notnull
@@ -307,7 +304,7 @@ var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 ```
 
 #### Example 2
-Instead of using a base class, you could use decorators to add behaviour to handlers. Using a decorator may look like:
+You can also use decorators to add behaviour to handlers. Using a decorator may look like:
 ```csharp
 var decoratedHandler = i.Get<MyHandler>().DecorateWithPerformanceProfiler();
 var result = await decoratedHandler.HandleAsync(request);
@@ -367,30 +364,24 @@ public static class __WithPerformanceLogging
         this IRequestHandler<TRequest, TResponse> decorated, IGet i)
     {
         var decorator = i.Get<PerformanceLoggingDecoratedHandler<TRequest, TResponse>>();
-        decorator.Decorate(decorated);
+        decorator.Decorated = decorated;
         return decorator;
     }
 
     public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IDependency _dependency;
+        private readonly IPerformanceLogger _performanceLogger;
 
-        public PerformanceLoggingDecoratedHandler(IDependency dependency)
+        public PerformanceLoggingDecoratedHandler(IPerformanceLogger dependency)
         {
-            _dependency = dependency;
+            _performanceLogger = dependency;
         }
 
         public IRequestHandler<TRequest, TResponse> Decorated { get; set; } = default!;
 
-        public IRequestHandler<TRequest, TResponse> Decorate(IRequestHandler<TRequest, TResponse> decorated)
-        {
-            Decorated = decorated;
-            return this;
-        }
-
         public async Task<TResponse> HandleAsync(TRequest request)
         {
-            using (_dependency.DoSomething())
+            using (_performanceLogger.Measure())
             {
                 return await Decorated.HandleAsync(request);
             }
