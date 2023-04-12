@@ -2,24 +2,24 @@ using TestHelpers.Mocks;
 
 namespace Tests;
 
-public interface IDecoratableHandler<TRequest, TResponse>
+public interface IRequestHandler<TRequest, TResponse>
 {
     public Task<TResponse> HandleAsync(TRequest request);
 }
 
-public static class DecoratableHandlerExtensions
+public static class __DecorateWithPerformanceProfiler
 {
-    public static IDecoratableHandler<TRequest, TResponse> DecorateWithPerformanceProfiler<TRequest, TResponse>(
-        this IDecoratableHandler<TRequest, TResponse> decorated)
+    public static IRequestHandler<TRequest, TResponse> DecorateWithPerformanceProfiler<TRequest, TResponse>(
+        this IRequestHandler<TRequest, TResponse> decorated)
     {
         return new PerformanceProfilerDecoratedHandler<TRequest, TResponse>(decorated);
     }
 
-    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IDecoratableHandler<TRequest, TResponse>
+    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IDecoratableHandler<TRequest, TResponse> _decorated;
+        private readonly IRequestHandler<TRequest, TResponse> _decorated;
 
-        public PerformanceProfilerDecoratedHandler(IDecoratableHandler<TRequest, TResponse> decorated)
+        public PerformanceProfilerDecoratedHandler(IRequestHandler<TRequest, TResponse> decorated)
         {
             _decorated = decorated;
         }
@@ -32,35 +32,32 @@ public static class DecoratableHandlerExtensions
             }
         }
     }
+}
 
-    public static IDecoratableHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
-        this IDecoratableHandler<TRequest, TResponse> decorated, IGet i)
+public static class __WithPerformanceLogging
+{
+    public static IRequestHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
+        this IRequestHandler<TRequest, TResponse> decorated, IGet i)
     {
         var decorator = i.Get<PerformanceLoggingDecoratedHandler<TRequest, TResponse>>();
-        decorator.Decorate(decorated);
+        decorator.Decorated = decorated;
         return decorator;
     }
 
-    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IDecoratableHandler<TRequest, TResponse>
+    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IDependency _dependency;
+        private readonly IPerformanceLogger _performanceLogger;
 
-        public PerformanceLoggingDecoratedHandler(IDependency dependency)
+        public PerformanceLoggingDecoratedHandler(IPerformanceLogger dependency)
         {
-            _dependency = dependency;
+            _performanceLogger = dependency;
         }
 
-        public IDecoratableHandler<TRequest, TResponse> Decorated { get; set; } = default!;
-
-        public IDecoratableHandler<TRequest, TResponse> Decorate(IDecoratableHandler<TRequest, TResponse> decorated)
-        {
-            Decorated = decorated;
-            return this;
-        }
+        public IRequestHandler<TRequest, TResponse> Decorated { get; set; } = default!;
 
         public async Task<TResponse> HandleAsync(TRequest request)
         {
-            using (_dependency.DoSomething())
+            using (_performanceLogger.Measure())
             {
                 return await Decorated.HandleAsync(request);
             }
@@ -74,13 +71,26 @@ public class DecoratorExample
     {
         IGet i = default!;
         var request = new Request();
-        var decoratedHandler = i.Get<MyHandler>().DecorateWithPerformanceProfiler();
-        var result = await decoratedHandler.HandleAsync(request);
+        {
+            var decoratedHandler = i.Get<MyHandler>().DecorateWithPerformanceProfiler();
+            var result = await decoratedHandler.HandleAsync(request);
+        }
+
+        {
+            var result = await i.Get<MyHandler>()
+                .DecorateWithPerformanceProfiler()
+                .HandleAsync(request);
+        }
+
+        {
+            var decoratedHandler = i.Get<MyHandler>().WithPerformanceLogging(i);
+            var result = await decoratedHandler.HandleAsync(request);
+        }
     }
 
     public class Request { }
 
-    public class MyHandler : IDecoratableHandler<Request, Result>
+    public class MyHandler : IRequestHandler<Request, Result>
     {
         public Task<Result> HandleAsync(Request request)
         {
