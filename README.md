@@ -2,17 +2,21 @@
 
 Instantiate classes that are NOT in your service collection via `i.Get<MyClass>()`. Dependencies from your service collection are automatically injected. Get an IEnumerable of class instances (with their dependencies injected) via `i.GetAll<IMyInterface>()` or `i.GetAll<MyBaseClass>()`.
 
-| Package | Latest version | `i` |
-| ------------- | ------------- |------------- |
-| [IGet](https://www.nuget.org/packages/iget) | [![Nuget](https://img.shields.io/nuget/v/iget)](https://www.nuget.org/packages/iget) | `i.Get<Class>()` or `i.Get<IInterface>(reflectedClassType)` |
-| [IGet.GetAll](https://www.nuget.org/packages/IGet.GetAll) | [![Nuget](https://img.shields.io/nuget/v/iget.getall)](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
+| Package | `i` |
+| ------------- | ------------- |
+| [IGet](https://www.nuget.org/packages/iget) | `i.Get<Class>()` or `i.Get<IInterface>(reflectedClassType)` |
+| [IGet.GetAll](https://www.nuget.org/packages/IGet.GetAll) | `i.GetAll<IInterface>()` or `i.GetAll<BaseClass>()` |
 
 ### Table of Contents
-- **[Quick setup](#quick-setup)**
-- **[Why IGet?](#why-iget)**
-- **[Why IGet.GetAll?](#why-igetgetall)**
+- **[Setup of IGet](#setup-of-iget)**
+- **[Setup with GetAll](#setup-with-getall)**
+- **[Declaring a handler](#declaring-a-handler)**
+- **[Using a handler](#using-a-handler)**
+- **[More complex scenarios](#more-complex-scenarios)**
+- **[Shared behaviour](#shared-behaviour)**
+- **[Using GetAll](#using-getall)**
 
-## Quick setup
+## Setup of IGet
 
 1. Install via [Visual Studio's NuGet Package Manager](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio):
 
@@ -22,7 +26,20 @@ Instantiate classes that are NOT in your service collection via `i.Get<MyClass>(
 ```csharp
 builder.Services.AddIGet();
 ```
-3. Now you can use it (for example in a .NET Core web app):
+
+## Setup with GetAll
+
+1. If you've also installed IGet.GetAll, then add the following using statement (or add it as a global using):
+```csharp
+using IGetAll;
+```
+2. and add to the service collection:
+```csharp
+serviceCollection.AddIGet();
+serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
+```
+
+## An impression
 ```csharp
 public class IndexModel : PageModel
 {
@@ -42,27 +59,6 @@ public class IndexModel : PageModel
 ...
 }
 ```
-4. If you've also installed IGet.GetAll, then add the following using statement (or add it as a global using):
-```csharp
-using IGetAll;
-```
-5. and add to the service collection:
-```csharp
-serviceCollection.AddIGet();
-serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
-```
-For more examples, see below.
-
-
-## Why IGet?
-
-- you don't need to implement any interface for your handlers.
-- have compile-time checks that all handlers exist.
-- use editor shortcuts to jump to a handler's method immediately.
-- have a short StackTrace in case of an error.
-- IGet is easy to understand - this might save time and money.
-- IGet is extremely lightweight - less code often means fewer bugs.
-
 
 ## Declaring a handler
 
@@ -229,23 +225,25 @@ public class MyEventPublisher
 ```
 Notes:
 - Exceptions should be logged in the `catch` blocks.
-- If you dislike creating event publishers like this, then have a look at the IGet.GetAll examples further down this readme.
+- Creating a generic event publisher for each of your event types can be done with IGet.GetAll - see the examples further down this readme.
 
+## Shared behaviour
 
-#### Example 3
-You may want multiple handlers to have certian behaviour, for example logging their execution time. You could create a base class for (a subset of) your handlers:
+You may want multiple handlers to have certian behaviour, for example logging their execution time. You can do this via inheritance or via decorators.
+
+#### Example 1
+You could create a base class for (a subset of) your handlers if you want to reduce the number of constructor dependencies in your concrete handlers and/or do performance logging (this example violates the single-responsibility principle):
 ```csharp
-public abstract class BaseHandler<THandler,TRequest, TResponse>
-    where THandler : notnull
+public abstract class BaseHandler<TRequest, TResponse>
     where TRequest : notnull
 {
-    protected readonly ILogger<THandler> _logger;
+    protected readonly ILogger _logger;
     protected readonly IDbConnectionFactory _connectionFactory;
     protected readonly IHostEnvironment _hostEnvironment;
 
     public BaseHandler(IBaseHandlerServices baseHandlerServices)
     {
-        _logger = baseHandlerServices.LoggerFactory.CreateLogger<THandler>();
+        _logger = baseHandlerServices.LoggerFactory.CreateLogger(GetType().FullName!);
         _connectionFactory = baseHandlerServices.ConnectionFactory;
         _hostEnvironment = baseHandlerServices.HostEnvironment;
     }
@@ -282,8 +280,7 @@ public abstract class BaseHandler<THandler,TRequest, TResponse>
 ```
 Inherit:
 ```csharp
-public class ProductOverviewQueryHandler 
-    : BaseHandler<ProductOverviewQueryHandler, Query, Result>
+public class ProductOverviewQueryHandler : BaseHandler<Query, Result>
 {
     public ProductOverviewQueryHandler(IBaseHandlerServices baseHandlerServices) 
         : base(baseHandlerServices)
@@ -309,32 +306,38 @@ Use:
 var result = await i.Get<ProductOverviewQueryHandler>().HandleAsync(query);
 ```
 
-#### Example 4
-Instead of using a base class, you could use decorators to add behaviour to handlers:
+#### Example 2
+Instead of using a base class, you could use decorators to add behaviour to handlers. Using a decorator may look like:
 ```csharp
 var decoratedHandler = i.Get<MyHandler>().DecorateWithPerformanceProfiler();
 var result = await decoratedHandler.HandleAsync(request);
 ```
+or
+```csharp
+var result = await i.Get<MyHandler>()
+    .DecorateWithPerformanceProfiler()
+    .HandleAsync(request);
+```
 For this to work, you need something like:
 ```csharp
-public interface IDecoratableHandler<TRequest, TResponse>
+public interface IRequestHandler<TRequest, TResponse>
 {
     public Task<TResponse> HandleAsync(TRequest request);
 }
 
-public static class DecoratableHandlerExtensions
+public static class __DecorateWithPerformanceProfiler
 {
-    public static IDecoratableHandler<TRequest, TResponse> DecorateWithPerformanceProfiler<TRequest, TResponse>(
-        this IDecoratableHandler<TRequest, TResponse> decorated)
+    public static IRequestHandler<TRequest, TResponse> DecorateWithPerformanceProfiler<TRequest, TResponse>(
+        this IRequestHandler<TRequest, TResponse> decorated)
     {
         return new PerformanceProfilerDecoratedHandler<TRequest, TResponse>(decorated);
     }
 
-    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IDecoratableHandler<TRequest, TResponse>
+    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IDecoratableHandler<TRequest, TResponse> _decorated;
+        private readonly IRequestHandler<TRequest, TResponse> _decorated;
 
-        public PerformanceProfilerDecoratedHandler(IDecoratableHandler<TRequest, TResponse> decorated)
+        public PerformanceProfilerDecoratedHandler(IRequestHandler<TRequest, TResponse> decorated)
         {
             _decorated = decorated;
         }
@@ -350,7 +353,7 @@ public static class DecoratableHandlerExtensions
 }
 ```
 
-#### Example 5
+#### Example 3
 If a decorator depends on services, you could create an extension method with the addition argument `IGet i`. Using the extension method then looks like this:
 ```csharp
 var decoratedHandler = i.Get<MyHandler>().WithPerformanceLogging(i);
@@ -358,51 +361,47 @@ var result = await decoratedHandler.HandleAsync(request);
 ```
 To make this work, create something like this:
 ```csharp
-public static IDecoratableHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
-    this IDecoratableHandler<TRequest, TResponse> decorated, IGet i)
+public static class __WithPerformanceLogging
+{
+    public static IRequestHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
+        this IRequestHandler<TRequest, TResponse> decorated, IGet i)
     {
         var decorator = i.Get<PerformanceLoggingDecoratedHandler<TRequest, TResponse>>();
         decorator.Decorate(decorated);
         return decorator;
     }
 
-public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IDecoratableHandler<TRequest, TResponse>
-{
-    private readonly IDependency _dependency;
-
-    public PerformanceLoggingDecoratedHandler(IDependency dependency)
+    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     {
-        _dependency = dependency;
-    }
+        private readonly IDependency _dependency;
 
-    public IDecoratableHandler<TRequest, TResponse> Decorated { get; set; } = default!;
-
-    public IDecoratableHandler<TRequest, TResponse> Decorate(IDecoratableHandler<TRequest, TResponse> decorated)
-    {
-        Decorated = decorated;
-        return this;
-    }
-
-    public async Task<TResponse> HandleAsync(TRequest request)
-    {
-        using (_dependency.DoSomething())
+        public PerformanceLoggingDecoratedHandler(IDependency dependency)
         {
-            return await Decorated.HandleAsync(request);
+            _dependency = dependency;
+        }
+
+        public IRequestHandler<TRequest, TResponse> Decorated { get; set; } = default!;
+
+        public IRequestHandler<TRequest, TResponse> Decorate(IRequestHandler<TRequest, TResponse> decorated)
+        {
+            Decorated = decorated;
+            return this;
+        }
+
+        public async Task<TResponse> HandleAsync(TRequest request)
+        {
+            using (_dependency.DoSomething())
+            {
+                return await Decorated.HandleAsync(request);
+            }
         }
     }
 }
 ```
 
-## Why IGet.GetAll?
+## Using GetAll
 
-With `i.GetAll<T>()` you can get multiple handlers that implement the same interface or base class. No matter how complicated your interfaces or generic base classes are - think about `IMyInterface<SomeClass, NestedBaseClass<AnotherClass, AndMore>>` - no additional configuration is needed.
-
-## About IGet.GetAll's performance
-
-Each time you use `i.GetAll<T>()` for a new type `T`, the collected `Type[]` is stored in a `ConcurrentDictionary`. The next time you call `i.GetAll<T>()` for the same type `T`, no assembly scanning is done.
-
-
-## i.GetAll&lt;T&gt;() examples
+With `i.GetAll<T>()` you can get multiple handlers that implement the same interface or base class. Each time you use `i.GetAll<T>()` for a new type `T`, the collected `Type[]` is stored in a `ConcurrentDictionary`. The next time you call `i.GetAll<T>()` for the same type `T`, no assembly scanning is done.
 
 #### Example 1
 This example shows how you can create a generic event publisher that collects the handlers for you.
