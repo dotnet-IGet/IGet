@@ -251,19 +251,19 @@ public abstract class BaseHandler<TRequest, TResponse>
         {
             _logger.LogInformation("Start handling request {RequestMembers}.", request.ToKeyValuePairsString());
         }
-        var startTime = DateTime.UtcNow;
-
+        var stopWatch = new Stopwatch();
         TResponse result;
         try
         {
+            stopWatch.Start();
             result = await HandleCoreAsync(request, cancellationToken);
         }
         finally
         {
-            var totalMilliseconds = (DateTime.UtcNow - startTime).TotalMilliseconds;
-            if (!_hostEnvironment.IsProduction() || totalMilliseconds > 500)
+            stopWatch.Stop();
+            if (!_hostEnvironment.IsProduction() || stopWatch.ElapsedMilliseconds > 500)
             {
-                _logger.LogInformation("Finished in {TotalMilliseconds}ms.", totalMilliseconds);
+                _logger.LogInformation("Finished in {TotalMilliseconds}ms.", stopWatch.ElapsedMilliseconds);
             }
         }
 
