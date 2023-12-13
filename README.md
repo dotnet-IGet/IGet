@@ -340,7 +340,7 @@ public static class __DecorateWithPerformanceProfiler
 ```
 
 #### Example 3
-If a decorator depends on services, you could create an extension method with the addition argument `IGet i`. Using the extension method then looks like this:
+If a decorator depends on services, you could create an extension method with the additional argument `IGet i`. Using the extension method then looks like this:
 ```csharp
 var decoratedHandler = i.Get<MyHandler>().WithPerformanceLogging(i);
 var result = await decoratedHandler.HandleAsync(request);
@@ -350,10 +350,10 @@ To make this work, create something like this:
 public static class __WithPerformanceLogging
 {
     public static IRequestHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
-        this IRequestHandler<TRequest, TResponse> decorated, IGet i)
+        this IRequestHandler<TRequest, TResponse> toDecorate, IGet i)
     {
         var decorator = i.Get<PerformanceLoggingDecoratedHandler<TRequest, TResponse>>();
-        decorator.Decorated = decorated;
+        decorator.Decorated = toDecorate;
         return decorator;
     }
 

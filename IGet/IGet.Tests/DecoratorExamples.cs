@@ -31,10 +31,10 @@ public static class __DecorateWithPerformanceProfiler
 public static class __WithPerformanceLogging
 {
     public static IRequestHandler<TRequest, TResponse> WithPerformanceLogging<TRequest, TResponse>(
-        this IRequestHandler<TRequest, TResponse> decorated, IGet i)
+        this IRequestHandler<TRequest, TResponse> toDecorate, IGet i)
     {
         var decorator = i.Get<PerformanceLoggingDecoratedHandler<TRequest, TResponse>>();
-        decorator.Decorated = decorated;
+        decorator.Decorated = toDecorate;
         return decorator;
     }
 
