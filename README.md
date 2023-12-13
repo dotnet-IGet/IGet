@@ -57,9 +57,9 @@ or
 ```csharp
 public class IndexModel : PageModel
 {   
-    public void OnPost([FromServices] IGet i, MyCommand command)
+    public void OnPost([FromServices] IGet i, FormPost request)
     {
-        var data = i.Get<CommandHandler>().Handle(command);
+        var result = i.Get<FormPostHandler>().Handle(request);
         ...
     }
 ...
