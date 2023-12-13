@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	  <TargetFramework>netstandard2.0</TargetFramework>
-	  <Version>1.1.6</Version>
+	  <Version>1.1.7</Version>
 	  <Description>Instantiate classes that are NOT in your service collection via i.Get&lt;Class&gt;(). Dependencies from your service collection are automatically injected. Setup: serviceCollection.AddIGet(). See the readme for many examples.</Description>
 	  <PackageIcon>logo.png</PackageIcon>
 	  <RepositoryUrl>https://github.com/dotnet-IGet/IGet</RepositoryUrl>
