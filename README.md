@@ -41,13 +41,10 @@ serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 ```
 
-## An impression
+## An impression (.NET 8 and up)
 ```csharp
-public class IndexModel : PageModel
+public class IndexModel(IGet i) : PageModel
 {
-    private readonly IGet i;
-    public IndexModel(IGet iget) => i = iget;    
-    
     public void OnGet()
     {
         var data = i.Get<DataRequestHandler>().Handle();
@@ -57,10 +54,24 @@ public class IndexModel : PageModel
 }
 ```
 
+## An impression (before .NET 8)
+```csharp
+public class IndexModel : PageModel
+{    
+    public void OnPost([FromServices] IGet i, MyCommand command)
+    {
+        var data = i.Get<CommandHandler>().Handle(command);
+        ...
+    }
+...
+}
+```
+
+
 ## Declaring a handler
 
 #### Example 1
-A method signature that fits many contexts is `Task<TResult> HandleAsync(TRequest request, CancellationToken cancellationToken)`:
+A method signature that may fit many contexts is `Task<TResult> HandleAsync(TRequest request, CancellationToken cancellationToken)`. This example uses a classic constructor instead of the primary constructor feature of C# 12 and up:
 ```csharp
 public class MyHandler
 {
@@ -81,15 +92,8 @@ public class MyHandler
 #### Example 2
 A method with a value type parameter:
 ```csharp
-public class MyHandler
+public class MyHandler(IConnectionFactory connectionFactory)
 {
-    private IConnectionFactory _connectionFactory;
-
-    public MyHandler(IConnectionFactory connectionFactory)
-    {
-        _connectionFactory = connectionFactory;
-    }
-
     public async Task<MyResult> ChooseASignature(int id)
     {
         ...
@@ -99,15 +103,8 @@ public class MyHandler
 #### Example 3
 Synchronous code:
 ```csharp
-public class MyHandler
+public class MyHandler(ILogger<MyHandler> logger)
 {
-    private ILogger<MyHandler> _logger;
-
-    public MyHandler(ILogger<MyHandler> logger)
-    {
-        _logger = logger;
-    }
-
     public void Handle()
     {
         // do something
@@ -120,7 +117,7 @@ public class MyHandler
 
 #### Example 1
 ```csharp
-var result = i.Get<MyHandler>().AnyRandomSignature(1);
+var result = i.Get<MyHandler>().YourSignature(1);
 ```
 #### Example 2
 ```csharp
@@ -148,17 +145,10 @@ Handlers may get other handlers to do stuff for them.
 
 Declare:
 ```csharp
-public class SubscribeRequestHandler
+public class SubscribeRequestHandler(
+    IConnectionFactory connectionFactory,
+    IGet i)
 {
-    private readonly IConnectionFactory _connectionFactory;
-    private readonly IGet i;
-
-    public SubscribeRequestHandler(IConnectionFactory connectionFactory, IGet iget)
-    {
-        _connectionFactory = connectionFactory;
-        i = iget;
-    }
-
     public async Task<Result> HandleAsync(SubscribeRequest request)
     {
         var validationResult = await i.Get<SubscribeRequestValidator>().ValidateAsync(request);
@@ -166,7 +156,7 @@ public class SubscribeRequestHandler
         {
             return validationResult;
         }
-        using var connection = await _connectionFactory.GetConnectionAsync();
+        using var connection = await connectionFactory.GetConnectionAsync();
         await connection.InsertAsync(new WorkshopParticipant
         {
             Name = request.Name.Trim(),
@@ -191,15 +181,8 @@ Use a try-catch structure for multiple noninterdependent handlers of the same ev
 await i.Get<MyEventPublisher>().PublishAsync(myEvent);
 ```
 ```csharp
-public class MyEventPublisher
+public class MyEventPublisher(IGet iget)
 {
-    private IGet i;
-
-    public MyEventPublisher(IGet iget)
-    {
-        i = iget;
-    }
-
     public async Task PublishAsync(MyEvent myEvent)
     {
         try
@@ -277,12 +260,9 @@ public abstract class BaseHandler<TRequest, TResponse>
 ```
 Inherit:
 ```csharp
-public class ProductOverviewQueryHandler : BaseHandler<Query, Result>
+public class ProductOverviewQueryHandler(IBaseHandlerServices baseHandlerServices)
+    : BaseHandler<Query, Result>(baseHandlerServices)
 {
-    public ProductOverviewQueryHandler(IBaseHandlerServices baseHandlerServices) 
-        : base(baseHandlerServices)
-    { }
-
     protected override async Task<Result> HandleCoreAsync(
         Query query,
         CancellationToken cancellationToken)
@@ -330,20 +310,14 @@ public static class __DecorateWithPerformanceProfiler
         return new PerformanceProfilerDecoratedHandler<TRequest, TResponse>(decorated);
     }
 
-    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> decorated) 
+        : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IRequestHandler<TRequest, TResponse> _decorated;
-
-        public PerformanceProfilerDecoratedHandler(IRequestHandler<TRequest, TResponse> decorated)
-        {
-            _decorated = decorated;
-        }
-
         public async Task<TResponse> HandleAsync(TRequest request)
         {
             using (PerformanceProfiler.Current.Step($"[Handler] {request.GetType().Name}"))
             {
-                return await _decorated.HandleAsync(request);
+                return await decorated.HandleAsync(request);
             }
         }
     }
@@ -368,20 +342,14 @@ public static class __WithPerformanceLogging
         return decorator;
     }
 
-    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse>(IPerformanceLogger performanceLogger)
+        : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IPerformanceLogger _performanceLogger;
-
-        public PerformanceLoggingDecoratedHandler(IPerformanceLogger dependency)
-        {
-            _performanceLogger = dependency;
-        }
-
         public IRequestHandler<TRequest, TResponse> Decorated { get; set; } = default!;
 
         public async Task<TResponse> HandleAsync(TRequest request)
         {
-            using (_performanceLogger.Measure())
+            using (performanceLogger.Measure())
             {
                 return await Decorated.HandleAsync(request);
             }
@@ -409,26 +377,16 @@ Implement the interface:
 ```csharp
 public class EventA { }
 
-public class HandlerA1 : IEventHandler<EventA>
+public class HandlerA1(ILogger<HandlerA1> logger) : IEventHandler<EventA>
 {
-    private readonly ILogger<HandlerA1> _logger;
-    public HandlerA1(ILogger<HandlerA1> logger)
-    {
-        _logger = logger;
-    }
     public async Task HandleAsync(EventA e, CancellationToken cancellationToken)
     {
         ...
     }
 }
 
-public class HandlerA2 : IEventHandler<EventA>
+public class HandlerA2(IConnectionFactory connectionFactory) : IEventHandler<EventA>
 {
-    private readonly IConnectionFactory _connectionFactory;
-    public HandlerA2(IConnectionFactory connectionFactory)
-    {
-        _connectionFactory = connectionFactory;
-    }
     public async Task HandleAsync(EventA e, CancellationToken cancellationToken)
     {
         ...
@@ -437,13 +395,8 @@ public class HandlerA2 : IEventHandler<EventA>
 
 public class EventB { }
 
-public class HandlerB1 : IEventHandler<EventB>
+public class HandlerB1(ILogger<HandlerB1> logger) : IEventHandler<EventB>
 {
-    private readonly ILogger<Handler1> _logger;
-    public HandlerB1(ILogger<Handler1> logger)
-    {
-        _logger = logger;
-    }
     public async Task HandleAsync(EventB e, CancellationToken cancellationToken)
     {
         ...
@@ -453,17 +406,8 @@ public class HandlerB1 : IEventHandler<EventB>
 
 Create a generic event publisher for all your event types:
 ```csharp
-public class EventPublisher<TEvent> where TEvent : notnull
+public class EventPublisher<TEvent>(IGet i, ILogger logger) where TEvent : notnull
 {
-    private readonly ILogger _logger;
-    private readonly IGet i;
-
-    public EventPublisher(IGet iget, ILogger logger)
-    {
-        _logger = logger;
-        i = iget;
-    }
-
     public async Task Publish(TEvent e, CancellationToken cancellationToken = default)
     {
         foreach (var handler in i.GetAll<IEventHandler<TEvent>>())
@@ -474,7 +418,7 @@ public class EventPublisher<TEvent> where TEvent : notnull
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in {handlerType} for {eventKeyValuePairs}.", handler.GetType().FullName, e.ToKeyValuePairsString());
+                logger.LogError(ex, "Error in {handlerType} for {eventKeyValuePairs}.", handler.GetType().FullName, e.ToKeyValuePairsString());
             }
         }
     }
@@ -509,7 +453,7 @@ public async Task Publish(TEvent e, CancellationToken cancellationToken = defaul
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in {handlerType} for {eventKeyValuePairs}.", handler.GetType().FullName, e.ToKeyValuePairsString());
+            logger.LogError(ex, "Error in {handlerType} for {eventKeyValuePairs}.", handler.GetType().FullName, e.ToKeyValuePairsString());
         }
     }
 }

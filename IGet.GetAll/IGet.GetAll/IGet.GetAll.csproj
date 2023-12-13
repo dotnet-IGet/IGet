@@ -3,14 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
 	  <Version>1.0.4</Version>
-	  <Description>
-Extends IGet. Get an IEnumerable of class instances (with their dependencies injected) via i.GetAll&lt;IMyInterface&gt;() or i.GetAll&lt;MyBaseClass&gt;(). Try it now:
-
-serviceCollection.AddIGet();
-serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
-
-See the readme for examples.
-	  </Description>
+	  <Description>Extends IGet. Get an IEnumerable of class instances (with their dependencies injected) via i.GetAll&lt;IMyInterface&gt;() or i.GetAll&lt;MyBaseClass&gt;(). Additional setup: serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... }). See the readme for many examples.</Description>
 	  <RepositoryUrl>https://github.com/dotnet-IGet/IGet</RepositoryUrl>
 	  <PackageIcon>logo.png</PackageIcon>
 	  <PackageTags>dependency injection; simple; alternative for MediatR</PackageTags>

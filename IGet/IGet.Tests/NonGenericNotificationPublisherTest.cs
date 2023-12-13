@@ -28,15 +28,8 @@ public class NonGenericNotificationPublisherTest
     }
 }
 
-public class NotificationPublisher
+public class NotificationPublisher(IGet i)
 {
-    private IGet i;
-
-    public NotificationPublisher(IGet iget)
-    {
-        i = iget;
-    }
-
     public async Task PublishAsync(Notification notification)
     {
         try
@@ -59,49 +52,28 @@ public class NotificationPublisher
 
 public class Notification { }
 
-public class FirstHandler
+public class FirstHandler(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public FirstHandler(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public Task HandleAsync(Notification notification)
     {
-        _logger.LogInformation("{typeName} started.", GetType().Name);
+        logger.LogInformation("{typeName} started.", GetType().Name);
         return Task.CompletedTask;
     }
 }
 
-public class SecondHandler
+public class SecondHandler(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public SecondHandler(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public Task HandleAsync(Notification notification)
     {
-        _logger.LogInformation("{typeName} started.", GetType().Name);
+        logger.LogInformation("{typeName} started.", GetType().Name);
         return Task.CompletedTask;
     }
 }
 
-public class ThirdHandler
+public class ThirdHandler(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public ThirdHandler(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public void Handle(Notification notification)
     {
-        _logger.LogInformation("{typeName} started.", GetType().Name);
+        logger.LogInformation("{typeName} started.", GetType().Name);
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using TestHelpers.Mocks;
 
 namespace Tests;
@@ -72,12 +73,9 @@ public abstract class BaseHandler<TRequest, TResponse>
         CancellationToken cancellationToken);
 }
 
-public class ProductOverviewQueryHandler : BaseHandler<Query, Result>
+public class ProductOverviewQueryHandler(IBaseHandlerServices baseHandlerServices)
+    : BaseHandler<Query, Result>(baseHandlerServices)
 {
-    public ProductOverviewQueryHandler(IBaseHandlerServices baseHandlerServices) 
-        : base(baseHandlerServices)
-    { }
-
     protected override async Task<Result> HandleCoreAsync(
         Query query,
         CancellationToken cancellationToken)
@@ -107,19 +105,12 @@ public interface IBaseHandlerServices
     IHostEnvironment HostEnvironment { get; }
 }
 
-public class BaseHandlerServices : IBaseHandlerServices
+public class BaseHandlerServices(
+    IDbConnectionFactory connectionFactory,
+    IHostEnvironment hostEnvironment,
+    ILoggerFactory loggerFactory) : IBaseHandlerServices
 {
-    public BaseHandlerServices(
-        IDbConnectionFactory connectionFactory,
-        IHostEnvironment hostEnvironment,
-        ILoggerFactory loggerFactory)
-    {
-        ConnectionFactory = connectionFactory;
-        HostEnvironment = hostEnvironment;
-        LoggerFactory = loggerFactory;
-    }
-
-    public IDbConnectionFactory ConnectionFactory { get; }
-    public IHostEnvironment HostEnvironment { get; }
-    public ILoggerFactory LoggerFactory { get; }
+    public IDbConnectionFactory ConnectionFactory { get; } = connectionFactory;
+    public IHostEnvironment HostEnvironment { get; } = hostEnvironment;
+    public ILoggerFactory LoggerFactory { get; } = loggerFactory;
 }

@@ -18,7 +18,7 @@ public class GetViaType
         var notification = new Notification();
         Type[] GetNotificationHandlerTypes()
         {
-            /* Usually this would be done via reflection, 
+            /* Usually this would be done via reflection,
              * but for this unit test that is not needed. */
             return new[] { typeof(NotificationHandler) };
         }
@@ -42,18 +42,11 @@ public class GetViaType
         Task Handle(Notification notification);
     }
 
-    public class NotificationHandler : INotificationHandler
+    public class NotificationHandler(ILogger logger) : INotificationHandler
     {
-        private ILogger _logger;
-
-        public NotificationHandler(ILogger logger)
-        {
-            _logger = logger;
-        }
-
         public Task Handle(Notification notification)
         {
-            _logger.LogInformation("Notification handled.");
+            logger.LogInformation("Notification handled.");
             return Task.CompletedTask;
         }
     }

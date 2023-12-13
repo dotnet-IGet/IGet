@@ -34,17 +34,8 @@ The method or operation is not implemented.
     }
 }
 
-public class MoreComplexHandler
+public class MoreComplexHandler(IGet i, ILogger<MoreComplexHandler> logger)
 {
-    private ILogger<MoreComplexHandler> _logger;
-    private IGet i;
-
-    public MoreComplexHandler(IGet iget, ILogger<MoreComplexHandler> logger)
-    {
-        _logger = logger;
-        i = iget;
-    }
-
     public Result<WhatWasAskedFor> Handle(RequestX request)
     {
         try
@@ -64,14 +55,14 @@ public class MoreComplexHandler
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Post processor failed for request {requestId}.", request.Id);
+                logger.LogWarning(ex, "Post processor failed for request {requestId}.", request.Id);
             }
 
             return Result.Success(whatWasAskedFor);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error for request {requestId}.", request.Id);
+            logger.LogError(ex, "Unexpected error for request {requestId}.", request.Id);
             return Result.Fail<WhatWasAskedFor>("Something went wrong. Try again later.");
         }
     }
@@ -81,65 +72,37 @@ public class RequestX { public int Id { get; set; } }
 
 public class WhatWasAskedFor { }
 
-public class RequestXValidator
+public class RequestXValidator(ILogger logger)
 {
-    private readonly ILogger _logger;
-
-    public RequestXValidator(ILogger logger)
-    {
-        _logger = logger;
-    }
     public Result Validate(RequestX request)
     {
-        _logger.LogInformation("Request {id} is valid.", request.Id);
+        logger.LogInformation("Request {id} is valid.", request.Id);
         return Result.Success();
     }
 }
 
-public class RequestXPreProcessor
+public class RequestXPreProcessor(ILogger logger)
 {
-    private ILogger _logger;
-
-    public RequestXPreProcessor(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     internal void Prepare(RequestX request)
     {
-        _logger.LogInformation("Preprocessing request {requestId} complete.", request.Id);
+        logger.LogInformation("Preprocessing request {requestId} complete.", request.Id);
     }
 }
 
-public class RequestXMainProcessor
+public class RequestXMainProcessor(ILogger logger)
 {
-    private ILogger _logger;
-
-    public RequestXMainProcessor(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     internal WhatWasAskedFor Handle(RequestX request)
     {
-        _logger.LogInformation("Main processing of request {requestId} complete.", request.Id);
+        logger.LogInformation("Main processing of request {requestId} complete.", request.Id);
         return new WhatWasAskedFor();
     }
 }
 
-public class RequestXPostProcessor
+public class RequestXPostProcessor(ILogger logger)
 {
-    private ILogger _logger;
-
-    public RequestXPostProcessor(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     internal void DoLessImportantStuffWith(RequestX request, WhatWasAskedFor whatWasAskedFor)
     {
-        _logger.LogInformation("Start post processing request {requestId}.", request.Id);
-
+        logger.LogInformation("Start post processing request {requestId}.", request.Id);
         throw new NotImplementedException();
     }
 }

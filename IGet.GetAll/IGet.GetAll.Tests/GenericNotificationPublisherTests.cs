@@ -53,16 +53,8 @@ public interface INotificationHandler<TNotification>
     Task HandleAsync(TNotification notification, CancellationToken cancellationToken);
 }
 
-public class NotificationPublisher<TNotification> where TNotification : notnull
+public class NotificationPublisher<TNotification>(IGet i, ILogger logger) where TNotification : notnull
 {
-    private readonly ILogger _logger;
-    private readonly IGet i;
-
-    public NotificationPublisher(IGet iget, ILogger logger)
-    {
-        _logger = logger;
-        i = iget;
-    }
 
     public async Task Publish(TNotification notification, CancellationToken cancellationToken = default)
     {
@@ -74,7 +66,7 @@ public class NotificationPublisher<TNotification> where TNotification : notnull
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in {handlerType} for {notificationKeyValuePairs}.", handler.GetType().FullName, notification.ToKeyValuePairsString());
+                logger.LogError(ex, "Error in {handlerType} for {notificationKeyValuePairs}.", handler.GetType().FullName, notification.ToKeyValuePairsString());
             }
         }
     }
@@ -82,52 +74,31 @@ public class NotificationPublisher<TNotification> where TNotification : notnull
 
 public class NotificationA { }
 
-public class HandlerA1 : INotificationHandler<NotificationA>
+public class HandlerA1(ILogger logger) : INotificationHandler<NotificationA>
 {
-    private readonly ILogger _logger;
-
-    public HandlerA1(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public async Task HandleAsync(NotificationA notification, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("{typeName} started.", GetType().Name);
+        logger.LogInformation("{typeName} started.", GetType().Name);
         await Task.Delay(0);
     }
 }
 
-public class HandlerA2 : INotificationHandler<NotificationA>
+public class HandlerA2(ILogger logger) : INotificationHandler<NotificationA>
 {
-    private readonly ILogger _logger;
-
-    public HandlerA2(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public async Task HandleAsync(NotificationA notification, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("{typeName} started.", GetType().Name);
+        logger.LogInformation("{typeName} started.", GetType().Name);
         await Task.Delay(0);
     }
 }
 
 public class NotificationB { }
 
-public class HandlerB1 : INotificationHandler<NotificationB>
+public class HandlerB1(ILogger logger) : INotificationHandler<NotificationB>
 {
-    private readonly ILogger _logger;
-
-    public HandlerB1(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public async Task HandleAsync(NotificationB notification, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("{typeName} started.", GetType().Name);
+        logger.LogInformation("{typeName} started.", GetType().Name);
         await Task.Delay(0);
     }
 }

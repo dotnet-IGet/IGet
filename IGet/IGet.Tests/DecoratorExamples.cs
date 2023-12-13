@@ -15,20 +15,14 @@ public static class __DecorateWithPerformanceProfiler
         return new PerformanceProfilerDecoratedHandler<TRequest, TResponse>(decorated);
     }
 
-    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> decorated)
+        : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IRequestHandler<TRequest, TResponse> _decorated;
-
-        public PerformanceProfilerDecoratedHandler(IRequestHandler<TRequest, TResponse> decorated)
-        {
-            _decorated = decorated;
-        }
-
         public async Task<TResponse> HandleAsync(TRequest request)
         {
             using (PerformanceProfiler.Current.Step($"[Handler] {request.GetType().Name}"))
             {
-                return await _decorated.HandleAsync(request);
+                return await decorated.HandleAsync(request);
             }
         }
     }
@@ -44,20 +38,14 @@ public static class __WithPerformanceLogging
         return decorator;
     }
 
-    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
+    public class PerformanceLoggingDecoratedHandler<TRequest, TResponse>(IPerformanceLogger performanceLogger)
+        : IRequestHandler<TRequest, TResponse>
     {
-        private readonly IPerformanceLogger _performanceLogger;
-
-        public PerformanceLoggingDecoratedHandler(IPerformanceLogger dependency)
-        {
-            _performanceLogger = dependency;
-        }
-
         public IRequestHandler<TRequest, TResponse> Decorated { get; set; } = default!;
 
         public async Task<TResponse> HandleAsync(TRequest request)
         {
-            using (_performanceLogger.Measure())
+            using (performanceLogger.Measure())
             {
                 return await Decorated.HandleAsync(request);
             }

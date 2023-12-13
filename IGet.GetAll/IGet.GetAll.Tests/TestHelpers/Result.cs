@@ -28,15 +28,10 @@ public class Result
 
 }
 
-public class Result<T> where T : notnull
+public class Result<T>(T data) where T : notnull
 {
-    public Result(T data)
-    {
-        Value = data;
-    }
-
     public bool IsFail => !IsSuccess;
     public bool IsSuccess => ErrorMessages.Count == 0;
     public List<string> ErrorMessages { get; } = new();
-    public T Value { get; }
+    public T Data { get; } = data;
 }

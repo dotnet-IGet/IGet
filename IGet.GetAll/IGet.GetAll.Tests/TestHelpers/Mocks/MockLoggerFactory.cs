@@ -1,19 +1,12 @@
 ﻿namespace TestHelpers.Mocks;
 
-public class MockLoggerFactory : ILoggerFactory
+public class MockLoggerFactory(TestLogger logger) : ILoggerFactory
 {
-    private readonly TestLogger _logger;
-
-    public MockLoggerFactory(TestLogger logger)
-    {
-        _logger = logger;
-    }
-
     public void AddProvider(ILoggerProvider provider)
     {
         throw new NotImplementedException();
     }
 
-    public ILogger CreateLogger(string categoryName) => _logger;
+    public ILogger CreateLogger(string categoryName) => logger;
     public void Dispose() { }
 }
