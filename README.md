@@ -254,7 +254,7 @@ public abstract class BaseHandler<TRequest, TResponse>
     }
 
     protected abstract Task<TResponse> HandleCoreAsync(
-        TRequest request, 
+        TRequest request,
         CancellationToken cancellationToken);
 }
 ```
@@ -310,7 +310,7 @@ public static class __DecorateWithPerformanceProfiler
         return new PerformanceProfilerDecoratedHandler<TRequest, TResponse>(decorated);
     }
 
-    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> decorated) 
+    public class PerformanceProfilerDecoratedHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> decorated)
         : IRequestHandler<TRequest, TResponse>
     {
         public async Task<TResponse> HandleAsync(TRequest request)

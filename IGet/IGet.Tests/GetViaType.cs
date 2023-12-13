@@ -15,38 +15,38 @@ public class GetViaType
         var i = services.GetService<IGet>()!;
 
         // Act
-        var notification = new Notification();
-        Type[] GetNotificationHandlerTypes()
+        var myEvent = new EventA();
+        Type[] GetEventHandlerTypes()
         {
             /* Usually this would be done via reflection,
              * but for this unit test that is not needed. */
-            return new[] { typeof(NotificationHandler) };
+            return new[] { typeof(MyEventHandler) };
         }
 
-        Type[] types = GetNotificationHandlerTypes();
+        Type[] types = GetEventHandlerTypes();
         foreach(var type in types)
         {
             try
             {
-                await i.Get<INotificationHandler>(type).Handle(notification);
+                await i.Get<IEventHandler>(type).Handle(myEvent);
             }
             catch { }
         }
 
         // Assert
-        Assert.Equal("[Information] Notification handled.", Assert.Single(logger.Logs));
+        Assert.Equal("[Information] EventA handled.", Assert.Single(logger.Logs));
     }
 
-    public interface INotificationHandler
+    public interface IEventHandler
     {
-        Task Handle(Notification notification);
+        Task Handle(EventA e);
     }
 
-    public class NotificationHandler(ILogger logger) : INotificationHandler
+    public class MyEventHandler(ILogger logger) : IEventHandler
     {
-        public Task Handle(Notification notification)
+        public Task Handle(EventA e)
         {
-            logger.LogInformation("Notification handled.");
+            logger.LogInformation("EventA handled.");
             return Task.CompletedTask;
         }
     }

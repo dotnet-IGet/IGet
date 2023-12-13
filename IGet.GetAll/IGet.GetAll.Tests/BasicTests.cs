@@ -16,18 +16,18 @@ public class BasicTests : IDisposable
     [Fact]
     public void GetsClassesThatImplementTheInterface()
     {
-        var handlers = i.GetAll<IMyGenericInterface<NotificationA>>().ToArray();
+        var handlers = i.GetAll<IMyGenericInterface<EventA>>().ToArray();
         Assert.Equal(2, handlers.Length);
         Assert.Contains(typeof(HandlerA1), handlers.Select(x => x.GetType()));
         Assert.Contains(typeof(HandlerA2), handlers.Select(x => x.GetType()));
-        Assert.Equal(typeof(HandlerB1), Assert.Single(i.GetAll<IMyGenericInterface<NotificationB>>()).GetType());
+        Assert.Equal(typeof(HandlerB1), Assert.Single(i.GetAll<IMyGenericInterface<EventB>>()).GetType());
     }
 
     [Fact]
     public void GetsClassesThatImplementMultipleInterfaces()
     {
-        var typeofHandlersC = i.GetAll<IMyGenericInterface<NotificationC>>().Single().GetType();
-        var typeofHandlersD = i.GetAll<IMyGenericInterface<NotificationD>>().Single().GetType();
+        var typeofHandlersC = i.GetAll<IMyGenericInterface<EventC>>().Single().GetType();
+        var typeofHandlersD = i.GetAll<IMyGenericInterface<EventD>>().Single().GetType();
         Assert.Equal(typeof(HandlerCxD), typeofHandlersC);
         Assert.Equal(typeof(HandlerCxD), typeofHandlersD);
 
@@ -99,16 +99,16 @@ public class BasicTests : IDisposable
     public interface IMyNotImplementedInterface { }
 
     public class MyClassWithNonGenericInterface : IMyNonGenericInterface { }
-    public class NotificationA { }
-    public class HandlerA1 : IMyGenericInterface<NotificationA> { }
-    public class HandlerA2 : IMyGenericInterface<NotificationA> { }
+    public class EventA { }
+    public class HandlerA1 : IMyGenericInterface<EventA> { }
+    public class HandlerA2 : IMyGenericInterface<EventA> { }
 
-    public class NotificationB { }
-    public class HandlerB1 : IMyGenericInterface<NotificationB> { }
+    public class EventB { }
+    public class HandlerB1 : IMyGenericInterface<EventB> { }
 
-    public class NotificationC {  }
-    public class NotificationD { }
-    public class HandlerCxD : IMyGenericInterface<NotificationC>, IMyGenericInterface<NotificationD> { }
+    public class EventC {  }
+    public class EventD { }
+    public class HandlerCxD : IMyGenericInterface<EventC>, IMyGenericInterface<EventD> { }
 
 
     public void Dispose()
