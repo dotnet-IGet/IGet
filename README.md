@@ -41,7 +41,7 @@ serviceCollection.AddIGet();
 serviceCollection.AddIGetAll(new [] { typeof(Startup).Assembly, ... });
 ```
 
-## An impression (.NET 8 and up)
+## An impression (C# 12 and up)
 ```csharp
 public class IndexModel(IGet i) : PageModel
 {
@@ -53,14 +53,29 @@ public class IndexModel(IGet i) : PageModel
 ...
 }
 ```
-
-## An impression (before .NET 8)
+or
 ```csharp
 public class IndexModel : PageModel
-{    
+{   
     public void OnPost([FromServices] IGet i, MyCommand command)
     {
         var data = i.Get<CommandHandler>().Handle(command);
+        ...
+    }
+...
+}
+```
+
+## An impression (before C# 12)
+```csharp
+public class IndexModel : PageModel
+{
+    private readonly IGet i;
+    public IndexModel(IGet iget) => i = iget;    
+    
+    public void OnGet()
+    {
+        var data = i.Get<DataRequestHandler>().Handle();
         ...
     }
 ...
