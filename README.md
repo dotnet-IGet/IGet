@@ -220,7 +220,7 @@ public class MyEventPublisher(IGet iget)
 ```
 Notes:
 - Exceptions should be logged in the `catch` blocks.
-- Creating a generic event publisher for each of your event types can be done with IGet.GetAll - see the examples further down this readme.
+- Creating a generic event publisher for all of your event types can be done with IGet.GetAll - see the examples further down this readme.
 
 ## Shared behaviour
 
